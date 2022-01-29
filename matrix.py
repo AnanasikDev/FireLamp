@@ -13,16 +13,17 @@ LED_PIN = 18  # GPIO pin connected to the pixels (18 uses PWM!).
 # LED_PIN        = 10      # GPIO pin connected to the pixels (10 uses SPI /dev/spidev0.0).
 LED_FREQ_HZ = 800000  # LED signal frequency in hertz (usually 800khz)
 LED_DMA = 10  # DMA channel to use for generating signal (try 10)
-LED_BRIGHTNESS = 100  # Яркость (0 - 255)
+LED_BRIGHTNESS = 15  # Яркость (0 - 255)
 LED_INVERT = False  # True to invert the signal (when using NPN transistor level shift)
 LED_CHANNEL = 0  # set to '1' for GPIOs 13, 19, 41, 45 or 53
 #######################################
-MODE = 1
-MODES_Count = 5
+MODE = 2
+MODES_Count = 6
 
 _strip = None
 _args = None
 _pressed = False
+modechanged = False
 #######################################
 red = [255, 0, 0]
 green = [0, 255, 0]
@@ -162,51 +163,74 @@ class ColorClass:
 
 
 def randomFill(massive=300, speed=1.0):
-    global _pressed
+    global _pressed, modechanged
     speed = 1 / speed
-    for i in range(massive):
-        if _pressed:
-            return
-        setPixel(rand(0, 255), ColorClass.getRandomColor())
-        update()
-        wait(uniform(0.05 * speed, 0.12 * speed))
+    while True:
+        for i in range(massive):
+            if _pressed or modechanged:
+                _pressed = False
+                modechanged = False
+                return
+            setPixel(rand(0, 255), ColorClass.getRandomColor())
+            update()
+            wait(uniform(0.05 * speed, 0.12 * speed))
+        for i in range(massive*3):
+            if _pressed or modechanged:
+                _pressed = False
+                modechanged = False
+                return
+            setPixel(rand(0, 255), Color(0, 0, 0))
+            update()
+            wait(uniform(0.004 * speed, 0.01 * speed))
 
 
 def fill(color=None, delay=1.0):
-    global _pressed
+    # global _pressed
     if color is None : color = ColorClass.getRandomColor(45)
     for j in range(256):
         setPixel(j, color)
     update()
-    for i in range(10):
-        if not _pressed:
-            wait(delay/10)
+    # for i in range(10):
+    #     if not _pressed:
+    #         wait(delay/10)
 
 
 def fire():
+    global _pressed, modechanged
     for i in range(rand(250, 650)):
-        if _pressed:
+        if _pressed or modechanged:
+            _pressed = False
+            modechanged = False
             return
         pos = rand(0, 15) * round(_normalDistribution(0, 16, horizontal_mean=uniform(1.2, 3.5)))
         p = Pixel(256 - pos, Color(220, 1 * pos // 3, 0))
-        p.x = round(_normalDistribution(0, 16, horizontal_mean=uniform(-4, 4)))
+        #p.x = round(_normalDistribution(0, 16, horizontal_mean=uniform(-4, 4)))
+        p.x = rand(0, 15)
         p.xyToIndex()
         p.draw()
     update()
     for i in range(rand(250, 650)):
-        if _pressed:
+        if _pressed or modechanged:
+            _pressed = False
+            modechanged = False
             return
         pos = rand(0, 15) * round(_normalDistribution(0, 16, horizontal_mean=uniform(1.2, 3.5)))
         p = Pixel(pos, Color(0,0,0))
         p.x = round(_normalDistribution(0, 16, horizontal_mean=uniform(-4, 4)))
         p.xyToIndex()
         p.draw()
-    wait(0.05)
+    wait(uniform(0.08, 0.13))
 
 
 def candle():
+    # _colors = [Color(108, 39, 0), Color(110, 41, 1), Color(106, 40, 0), Color(107, 37, 0), Color(102, 38, 0),
+    #            Color(104, 40, 1), Color(112, 42, 0), Color(110, 40, 1), Color(111, 39, 2), Color(77, 28, 1),
+    #            Color(99, 36, 1)]
+    # _colors = [Color(100, 40, 0), Color(97, 37, 0), Color(101, 39, 0), Color(102, 41, 0),
+    #            Color(99, 39, 1), Color(103, 43, 1), Color(102, 36, 0), Color(109, 45, 0),
+    #            Color()]
     _colors = [Color(108, 39, 0), Color(110, 41, 1), Color(106, 40, 0), Color(107, 37, 0), Color(102, 38, 0),
-               Color(104, 40, 1), Color(112, 42, 0), Color(110, 40, 1), Color(111, 39, 2), Color(77, 28, 1),
+               Color(104, 40, 1), Color(109, 42, 0), Color(110, 40, 1), Color(108, 39, 2), Color(92, 36, 1),
                Color(99, 36, 1)]
     fill(choose(_colors), 0)
     wait(uniform(0.085, 0.25))
@@ -252,6 +276,7 @@ class Drop:
 
 
 def rain():
+    global _pressed, modechanged
     count = 6
     drops = []
     for i in range(count):
@@ -259,7 +284,9 @@ def rain():
                           ColorClass.modificateColor([6, 30 + rand(-5, 5), 30 + rand(-2, 3)])))
     print("ИНИЦИАЛИ")
     while True:
-        if _pressed:
+        if _pressed or modechanged:
+            _pressed = False
+            modechanged = False
             return
         for d in drops:
             d.move(0, 1)
@@ -269,6 +296,7 @@ def rain():
 
 
 def lava():
+    global _pressed, modechanged
     count = 6
     drops = []
     for i in range(count):
@@ -276,7 +304,9 @@ def lava():
                           ColorClass.modificateColor([250, 14, 6])))
     print("ИНИЦИАЛИ")
     while True:
-        if _pressed:
+        if _pressed or modechanged:
+            _pressed = False
+            modechanged = False
             return
         for d in drops:
             d.move(0, -1)
@@ -285,28 +315,42 @@ def lava():
         wait(uniform(0.05, 0.15))
 
 
-_modes = {1: randomFill,
+def rainbow():
+    for i in range(255-16, 255):
+        setPixel(i, Color(255, 0, 0))
+    for i in range(255-48, 255-32):
+        setPixel(i, Color(255, 128, 0))
+    for i in range(255-80, 255-64):
+        setPixel(i, Color(255, 255, 0))
+    for i in range(255-112, 255-96):
+        setPixel(i, Color(0, 255, 0))
+    for i in range(255-144, 255-128):
+        setPixel(i, Color(100, 100, 255))
+    for i in range(255-176, 255-160):
+        setPixel(i, Color(0, 0, 255))
+    for i in range(255-202, 255-192):
+        setPixel(i, Color(255, 0, 255))
+    update()
+
+
+modes = {1: randomFill,
           2: fire,
           3: candle,
           4: rain,
-          5: lava}
+          5: lava,
+          6: rainbow}
 
 
-if __name__ == '__main__':
-    # Process arguments
-    print("04.01.2021v")
+def process_mode():
+    while True:
+        if 1 <= MODE <= 6:
+            print(MODE)
+            modes[MODE]()
 
-    print('Press Ctrl-C to quit.')
-    if not _args.clear:
-        print('Use "-c" argument to clear LEDs on exit')
-    try:
 
-        while True:
-            if _pressed:
-                fill(Color(0, 0, 0), 0)
-                _pressed = False
-            _modes[MODE]()
-
-    except KeyboardInterrupt:
-        print("KeyboardInterruptException!!!")
+# while True:
+#     if _pressed:
+#         fill(Color(0, 0, 0), 0)
+#         _pressed = False
+#     _modes[MODE]()
 # 120 яркость белый цвет на всю матрицу 2 А
