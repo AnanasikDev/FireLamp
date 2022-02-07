@@ -27,6 +27,8 @@ class ServerHandler(BaseHTTPRequestHandler):
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
                 #matrix.modes[3]()
+                if matrix.MODE != 0 : matrix.modechanged = True
+                matrix.MODE = 0
                 matrix.fill(matrix.Color(int(r), int(g), int(b)))
                 #matrix.LED_BRIGHTNESS = i
                 #matrix.init()
@@ -77,6 +79,62 @@ class ServerHandler(BaseHTTPRequestHandler):
                 #matrix.LED_BRIGHTNESS = i
                 #matrix.init()
                 self.wfile.write(f"Enabled = {enable}".encode('utf-8'))
+            except:
+                pass
+
+        elif self.path.startswith("/st"): # set time
+            try:
+                print("Crya")
+
+                query = urlparse(self.path).query
+                query_components = dict(qc.split("=") for qc in query.split("&"))
+                c = query_components["c"]  # Текущее время
+                t = query_components["t"]  # Время старта
+                d = query_components["d"]  # Длительность рассвета
+                s = query_components["s"]  # График включения (понедельно)
+                e = int(query_components["e"])  # Состояние (Вкл/Выкл)
+
+                print(e)
+
+                if e == 0:
+                    matrix.sunriseon = False
+                    print(matrix.sunriseon)
+
+                else:
+
+                    matrix.sunriseon = True
+                    currenttime = list(map(int, c.split(":")))
+                    currentseconds = currenttime[-1] + currenttime[-2] * 60 + currenttime[-3] * 3600 + currenttime[-4] * 86400
+
+                    targettime = list(map(int, t.split(":")))
+                    targetseconds = targettime[-1] + targettime[-2] * 60 + targettime[-3] * 3600 + targettime[-4] * 86400
+
+                    schedule = list(map(int, s.split(":")))
+
+                    target_day_of_week = targettime[-7]
+
+                    print("TARGET = ", targettime)
+
+                    duration = list(map(int, d.split(":")))
+                    print(duration)
+                    durationseconds = duration[-1] + duration[-2] * 60 + duration[-3] * 3600
+                    print(durationseconds)
+
+                    if targetseconds < currentseconds:
+                        print("TIME IS WRONG")
+
+                    else:
+
+                        matrix.MODE = 0
+                        x = threading.Thread(target=matrix.sunrise, args=(currentseconds, targetseconds, durationseconds, target_day_of_week, schedule))
+                        x.start()
+
+                        # matrix.sunrise(currentseconds, targetseconds, durationseconds)
+
+                self.send_response(200)
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+
             except:
                 pass
 

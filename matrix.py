@@ -13,12 +13,12 @@ LED_PIN = 18  # GPIO pin connected to the pixels (18 uses PWM!).
 # LED_PIN        = 10      # GPIO pin connected to the pixels (10 uses SPI /dev/spidev0.0).
 LED_FREQ_HZ = 800000  # LED signal frequency in hertz (usually 800khz)
 LED_DMA = 10  # DMA channel to use for generating signal (try 10)
-LED_BRIGHTNESS = 15  # Яркость (0 - 255)
+LED_BRIGHTNESS = 70  # Яркость (0 - 255)
 LED_INVERT = False  # True to invert the signal (when using NPN transistor level shift)
 LED_CHANNEL = 0  # set to '1' for GPIOs 13, 19, 41, 45 or 53
 #######################################
 MODE = 2
-MODES_Count = 6
+MODES_Count = 7
 
 _strip = None
 _args = None
@@ -153,12 +153,24 @@ class ColorClass:
     def rgb_to_hex(rgb_tuple):
         return colors.rgb2hex([1.0 * x / 255 for x in rgb_tuple])
 
+    @staticmethod
+    def lerp(origin_color, target_color, k):
+        new_color = Color(origin_color.r, origin_color.g, origin_color.b);
+        new_color.r += (target_color.r - origin_color.r) * k
+        new_color.g += (target_color.g - origin_color.g) * k
+        new_color.b += (target_color.b - origin_color.b) * k
+
+        return new_color
+
 
 #######################################
 ### Режимы
 ### 0 : randomFill - плавное случайное заполнение
 ### 1 : fill - заполнение случайным цветом
 ### 2 : fire - огонь
+### TODO:
+### Переливание (полное, снизу вверх/сверху вниз)
+###
 #######################################
 
 
@@ -186,13 +198,24 @@ def randomFill(massive=300, speed=1.0):
 
 def fill(color=None, delay=1.0):
     # global _pressed
-    if color is None : color = ColorClass.getRandomColor(45)
+    # if color is None : color = ColorClass.getRandomColor(45)
     for j in range(256):
         setPixel(j, color)
     update()
     # for i in range(10):
     #     if not _pressed:
     #         wait(delay/10)
+
+
+# for i in range(100):
+#     # if not sunriseon:
+#     #     sunriseon = True
+#     #     return
+#     color = Color(0, 0, i)
+#     print(color, i)
+#     fill(color)
+#     update()
+#     wait(0.5)
 
 
 def fire():
@@ -220,6 +243,7 @@ def fire():
         p.xyToIndex()
         p.draw()
     wait(uniform(0.08, 0.13))
+    #wait(0.01)
 
 
 def candle():
@@ -331,6 +355,169 @@ def rainbow():
     for i in range(255-202, 255-192):
         setPixel(i, Color(255, 0, 255))
     update()
+    fill(Color(0,0,0))
+
+
+def clamp_color(color):
+    if color[0] < 0:
+        color[0] = 0
+    if color[1] < 0:
+        color[1] = 0
+    if color[2] < 0:
+        color[2] = 0
+
+    if color[0] > 255:
+        color[0] = 255
+    if color[1] > 255:
+        color[1] = 255
+    if color[2] > 255:
+        color[2] = 255
+
+
+def shimmer():
+    print("shimmer")
+    #color = [10, 10, 250]
+    color = [0, 200, 0]
+    fill(Color(abs(color[0]), abs(color[1]), abs(color[2])))
+    time_step = 0.25
+    color_step = 5
+    cycles = 40
+    # for i in range(int(cycles // 1)): # от голубого к красному
+    #     for line in range(15, -1, -1):
+    #         color[0] += 1
+    #         color[1] -= 1
+    #         color[2] -= 1
+    #
+    #         clamp_color(color)
+    #
+    #         print(color)
+    #
+    #         for pixel in range(16):
+    #             setPixel(line * 16 + pixel, Color(abs(color[0]), abs(color[1]), abs(color[2])))
+    #
+    #         update()
+    #         #wait(0.005)
+    #
+    # for i in range(int(cycles // 1)): # от красного к зеленому
+    #     for line in range(15, -1, -1):
+    #         color[0] -= 1
+    #         color[1] += 1
+    #         color[2] -= 1
+    #
+    #         clamp_color(color)
+    #
+    #         print(color)
+    #
+    #         for pixel in range(16):
+    #             setPixel(line * 16 + pixel, Color(abs(color[0]), abs(color[1]), abs(color[2])))
+    #
+    #         update()
+    #         #wait(0.005)
+
+    for i in range(int(cycles * 1)): # от зеленого к синему
+        color[2] += 5
+        color[1] -= 5
+        clamp_color(color)
+
+        print(color)
+
+        for line in range(16):
+            #color[0] -= 1
+            #color[1] -= 1
+
+            for pixel in range(0 + line % 2, 16, 2):
+                setPixel(line * 16 + pixel, Color(abs(color[0]), abs(color[1]), int(abs(color[2]) // 1.25)))
+
+        update()
+        #wait(0.00)
+    for i in range(int(cycles * 1)): # от зеленого к синему
+        color[2] -= 5
+        color[1] += 5
+        clamp_color(color)
+
+        print(color)
+
+        for line in range(16):
+            #color[0] -= 1
+            #color[1] -= 1
+
+            for pixel in range(0 + line % 2 + i % 2, 16, 2):
+                setPixel(line * 16 + pixel, Color(abs(color[0]), abs(color[1]), int(abs(color[2]) // 1.25)))
+
+        update()
+        #wait(0.00)
+
+
+def calculate_next_day(bools, start):
+    for i in range(start, len(bools) + start):
+        if i >= len(bools):
+            i = 0
+        if bools[i] == 1:
+            return i
+    return -1
+
+
+sunriseon = True
+waiting = False
+def sunrise(current_time, target_time, duration, target_day_of_week, schedule):
+    global sunriseon, waiting
+
+    print("Enabled!", sunriseon, waiting, current_time, target_time, duration, target_day_of_week, schedule)
+
+    while sunriseon:
+
+        if current_time < target_time and not waiting:
+            waiting = True
+            fill(Color(0, 0, 0))
+
+            print(target_time, current_time)
+
+            wait(target_time - current_time)
+            for i in range(10000):
+                wait((target_time - current_time) / 10000.0)
+                if not sunriseon:
+                    sunriseon = True
+                    print("Sunrise aborted")
+                    fill(Color(0, 100, 0))
+                    return
+        else:
+            waiting = False
+
+        # if not sunriseon:
+        #     sunriseon = True
+        #     return
+
+        print("SUNRISEEE start")
+
+
+        step = duration / 255.0
+
+        for i in range(255):
+            if not sunriseon:
+                sunriseon = True
+                print("Sunrise aborted")
+                fill(Color(0, 100, 0))
+                return
+            color = Color(i, i, 0)
+            print(color)
+            fill(color)
+            # wait(0.1)
+            wait(step)
+
+        print("SUNRISEEE end")
+
+        for i in range(60):
+            wait(60)
+            if not sunriseon:
+                sunriseon = True
+                print("Sunrise aborted")
+                fill(Color(0, 0, 0))
+
+                target_day_of_week += 1
+
+                target_time += schedule[calculate_next_day(schedule, target_day_of_week)] * 86400
+
+                return
 
 
 modes = {1: randomFill,
@@ -338,13 +525,14 @@ modes = {1: randomFill,
           3: candle,
           4: rain,
           5: lava,
-          6: rainbow}
+          6: rainbow,
+          7: shimmer}
 
 
 def process_mode():
     while True:
-        if 1 <= MODE <= 6:
-            print(MODE)
+        if 1 <= MODE <= len(modes):
+            # print(MODE) # debug
             modes[MODE]()
 
 
