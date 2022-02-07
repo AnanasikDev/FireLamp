@@ -4,7 +4,7 @@ from random import choice as choose
 from rpi_ws281x import *
 import argparse
 import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
-from math import log, sin, pi
+from math import log, sin, pi, log2
 import matplotlib.colors as colors
 
 #######################################
@@ -19,6 +19,7 @@ LED_CHANNEL = 0  # set to '1' for GPIOs 13, 19, 41, 45 or 53
 #######################################
 MODE = 2
 MODES_Count = 7
+MODES_ARGS = []
 
 _strip = None
 _args = None
@@ -174,8 +175,12 @@ class ColorClass:
 #######################################
 
 
-def randomFill(massive=300, speed=1.0):
+def randomFill(args):
     global _pressed, modechanged
+
+    massive = 300
+    speed = 1.0
+
     speed = 1 / speed
     while True:
         for i in range(massive):
@@ -218,15 +223,23 @@ def fill(color=None, delay=1.0):
 #     wait(0.5)
 
 
-def fire():
+def fire(args):
     global _pressed, modechanged
-    for i in range(rand(250, 650)):
+
+    if len(args) == 0:
+        speed = 1
+        freq = 1
+    else:
+        speed = int(args[0])
+        freq = int(args[1])
+
+    for i in range((rand(250, 650) // 4) * freq):
         if _pressed or modechanged:
             _pressed = False
             modechanged = False
             return
         pos = rand(0, 15) * round(_normalDistribution(0, 16, horizontal_mean=uniform(1.2, 3.5)))
-        p = Pixel(256 - pos, Color(220, 1 * pos // 3, 0))
+        p = Pixel(256 - pos, Color(220 // 2, 1 * pos // 3, 0))
         #p.x = round(_normalDistribution(0, 16, horizontal_mean=uniform(-4, 4)))
         p.x = rand(0, 15)
         p.xyToIndex()
@@ -242,11 +255,15 @@ def fire():
         p.x = round(_normalDistribution(0, 16, horizontal_mean=uniform(-4, 4)))
         p.xyToIndex()
         p.draw()
-    wait(uniform(0.08, 0.13))
+
+    w = (log2(speed+1)/3 - 0.2)
+    print(w)
+
+    wait(uniform(0.09, 0.11) / w)
     #wait(0.01)
 
 
-def candle():
+def candle(args):
     # _colors = [Color(108, 39, 0), Color(110, 41, 1), Color(106, 40, 0), Color(107, 37, 0), Color(102, 38, 0),
     #            Color(104, 40, 1), Color(112, 42, 0), Color(110, 40, 1), Color(111, 39, 2), Color(77, 28, 1),
     #            Color(99, 36, 1)]
@@ -299,7 +316,7 @@ class Drop:
         print(self.parts)
 
 
-def rain():
+def rain(args):
     global _pressed, modechanged
     count = 6
     drops = []
@@ -319,7 +336,7 @@ def rain():
         wait(uniform(0.05, 0.15))
 
 
-def lava():
+def lava(args):
     global _pressed, modechanged
     count = 6
     drops = []
@@ -339,7 +356,7 @@ def lava():
         wait(uniform(0.05, 0.15))
 
 
-def rainbow():
+def rainbow(args):
     for i in range(255-16, 255):
         setPixel(i, Color(255, 0, 0))
     for i in range(255-48, 255-32):
@@ -374,7 +391,7 @@ def clamp_color(color):
         color[2] = 255
 
 
-def shimmer():
+def shimmer(args):
     print("shimmer")
     #color = [10, 10, 250]
     color = [0, 200, 0]
@@ -533,7 +550,7 @@ def process_mode():
     while True:
         if 1 <= MODE <= len(modes):
             # print(MODE) # debug
-            modes[MODE]()
+            modes[MODE](MODES_ARGS)
 
 
 # while True:

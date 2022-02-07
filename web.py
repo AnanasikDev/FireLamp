@@ -41,6 +41,10 @@ class ServerHandler(BaseHTTPRequestHandler):
                 query = urlparse(self.path).query
                 query_components = dict(qc.split("=") for qc in query.split("&"))
                 modeid = int(query_components["mi"])
+                ops = query_components["ops"] # options
+
+                ops = list(ops.split(','))
+
                 #i = query_components["i"]
                 # query_components = { "imsi" : "Hello" }
 
@@ -53,6 +57,7 @@ class ServerHandler(BaseHTTPRequestHandler):
                 self.wfile.write(f"MODE = {modeid}".encode('utf-8'))
                 matrix.fill(matrix.Color(0,0,0))
                 matrix.modechanged = True
+                matrix.MODES_ARGS = ops
                 matrix.MODE = modeid
                 # for i in range(1000):
                 #     matrix.modes[modeid]()
