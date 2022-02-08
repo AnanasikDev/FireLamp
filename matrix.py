@@ -164,6 +164,10 @@ class ColorClass:
         return new_color
 
 
+def clamp(value, minv, maxv):
+    return max(min(value, maxv), minv)
+
+
 #######################################
 ### Режимы
 ### 0 : randomFill - плавное случайное заполнение
@@ -239,7 +243,16 @@ def fire(args):
             modechanged = False
             return
         pos = rand(0, 15) * round(_normalDistribution(0, 16, horizontal_mean=uniform(1.2, 3.5)))
-        p = Pixel(256 - pos, Color(220 // 2, 1 * pos // 3, 0))
+        line = (pos // 16)
+        # p = Pixel(256 - pos, Color(220 // 2, 1 * pos // 3, 0))
+        # p = Pixel(256 - pos, Color(int(7 * (pos+7)), int(50 // ((pos + 1) / 3)), 0))
+        # p = Pixel(256 - pos, Color((10 * pos + 35) * 2, (10 * pos + 35) // 2, 0))
+        r = 210 - int(((15 - line)**1.1).real) * 3
+        g = clamp(52 + (15 - line) * 12, 10, 95)
+        if 16 - line > 13:
+            g += (16 - line) * 2
+        p = Pixel(256 - pos, Color(r, g, 0))
+        print(pos, p.y, line, r, g)
         #p.x = round(_normalDistribution(0, 16, horizontal_mean=uniform(-4, 4)))
         p.x = rand(0, 15)
         p.xyToIndex()
@@ -487,11 +500,14 @@ def sunrise(current_time, target_time, duration, target_day_of_week, schedule):
             waiting = True
             fill(Color(0, 0, 0))
 
-            print(target_time, current_time)
+            step = (target_time - current_time) / 10000.0
 
-            wait(target_time - current_time)
+            # wait(target_time - current_time)
+
+            print(target_time, current_time, step)
             for i in range(10000):
-                wait((target_time - current_time) / 10000.0)
+                wait(step)
+                print(f"Waited! {10000-i} times left by {step} seconds")
                 if not sunriseon:
                     sunriseon = True
                     print("Sunrise aborted")
