@@ -237,7 +237,7 @@ def fire(args):
         speed = int(args[0])
         freq = int(args[1])
 
-    for i in range((rand(250, 650) // 4) * freq):
+    for i in range((rand(250, 650) // 4) * clamp(round(log2(freq / 1.2)), 1, 8)):
         if _pressed or modechanged:
             _pressed = False
             modechanged = False
@@ -283,11 +283,17 @@ def candle(args):
     # _colors = [Color(100, 40, 0), Color(97, 37, 0), Color(101, 39, 0), Color(102, 41, 0),
     #            Color(99, 39, 1), Color(103, 43, 1), Color(102, 36, 0), Color(109, 45, 0),
     #            Color()]
-    _colors = [Color(108, 39, 0), Color(110, 41, 1), Color(106, 40, 0), Color(107, 37, 0), Color(102, 38, 0),
-               Color(104, 40, 1), Color(109, 42, 0), Color(110, 40, 1), Color(108, 39, 2), Color(92, 36, 1),
-               Color(99, 36, 1)]
-    fill(choose(_colors), 0)
-    wait(uniform(0.085, 0.25))
+    # _colors = [Color(108, 39, 0), Color(110, 41, 1), Color(106, 40, 0), Color(107, 37, 0), Color(102, 38, 0),
+    #            Color(104, 40, 1), Color(109, 42, 0), Color(110, 40, 1), Color(108, 39, 2), Color(92, 36, 1),
+    #            Color(99, 36, 1)]
+
+    speed = abs(log2((float(args[0])) / 2.5) / 2.0 + 0.1)
+
+    print(speed)
+
+    # fill(choose(Color(70 + rand(-22, 22), 32 + rand(-9, 9), rand(0, 2))), 0)
+    fill(Color(70 + rand(-4, 4), 32 + rand(-7, 7), rand(0, 5)), 0)
+    wait(uniform(0.085, 0.25) / speed)
 
 
 # def rainbow():
