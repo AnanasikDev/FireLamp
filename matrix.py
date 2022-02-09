@@ -414,7 +414,9 @@ def shimmer(args):
     print("shimmer")
     #color = [10, 10, 250]
     color = [0, 200, 0]
-    fill(Color(abs(color[0]), abs(color[1]), abs(color[2])))
+    #fill(Color(color[0], color[1], color[2]))
+    #update()
+    #fill(Color(abs(color[0]), abs(color[1]), abs(color[2])))
     time_step = 0.25
     color_step = 5
     cycles = 40
@@ -450,38 +452,89 @@ def shimmer(args):
     #         update()
     #         #wait(0.005)
 
-    for i in range(int(cycles * 1)): # от зеленого к синему
+    # fill(Color(0, 25, 175))
+    # update()
+    # wait(1)
+    # fill(Color(0, 10, 190))
+    # update()
+    # wait(1)
+    # fill(Color(0, 0, 200))
+    # update()
+    # wait(1)
+    # fill(Color(0, 10, 190))
+    # update()
+    # wait(1)
+
+    for i in range(40): # от зеленого к синему
+        color[0] -= 4
+        color[1] -= 4
         color[2] += 5
-        color[1] -= 5
         clamp_color(color)
 
-        print(color)
+        print("зеленый - синий", color)
 
         for line in range(16):
-            #color[0] -= 1
-            #color[1] -= 1
+        #     color[0] -= 1
+        #     color[1] -= 1
+            for pixel in range(16):
+                setPixel(line * 16 + pixel, Color(abs(color[0]), abs(color[1]) // 5, abs(color[2])))
+        # fill(Color(abs(color[0]), abs(color[1]) // 5, abs(color[2])))
 
-            for pixel in range(0 + line % 2, 16, 2):
-                setPixel(line * 16 + pixel, Color(abs(color[0]), abs(color[1]), int(abs(color[2]) // 1.25)))
+            # for pixel in range(0 + line % 2, 16, 2):
+            #    setPixel(line * 16 + pixel, Color(abs(color[0]), abs(color[1]) // 5, abs(color[2])))
 
         update()
-        #wait(0.00)
-    for i in range(int(cycles * 1)): # от зеленого к синему
+        wait(0.012)
+
+    wait(0.1)
+
+    for i in range(40): # от синего к красному
+        color[0] += 4
+        color[1] -= 4
         color[2] -= 5
-        color[1] += 5
         clamp_color(color)
 
-        print(color)
+        print("синий - зеленый", color)
 
         for line in range(16):
-            #color[0] -= 1
-            #color[1] -= 1
+            # color[0] -= 1
+            # color[1] -= 1
 
-            for pixel in range(0 + line % 2 + i % 2, 16, 2):
-                setPixel(line * 16 + pixel, Color(abs(color[0]), abs(color[1]), int(abs(color[2]) // 1.25)))
+        # fill(Color(abs(color[0]), abs(color[1]) // 5, abs(color[2])))
+
+            # for pixel in range(0 + line % 2 + i % 2, 16, 2):
+            #    setPixel(line * 16 + pixel, Color(abs(color[0]), abs(color[1]) // 5, abs(color[2])))
+            for pixel in range(16):
+                setPixel(line * 16 + pixel, Color(abs(color[0]), abs(color[1]) // 5, abs(color[2])))
 
         update()
-        #wait(0.00)
+        wait(0.01)
+
+    wait(0.08)
+
+    for i in range(40): # от красного к зеленому
+        color[0] -= 4
+        color[1] += 4
+        color[2] -= 5
+        clamp_color(color)
+
+        print("красный - зеленый", color)
+
+        for line in range(16):
+            # color[0] -= 1
+            # color[1] -= 1
+
+        # fill(Color(abs(color[0]), abs(color[1]) // 5, abs(color[2])))
+
+            # for pixel in range(0 + line % 2 + i % 2, 16, 2):
+            #    setPixel(line * 16 + pixel, Color(abs(color[0]), abs(color[1]) // 5, abs(color[2])))
+            for pixel in range(16):
+                setPixel(line * 16 + pixel, Color(abs(color[0]), abs(color[1]) // 5, abs(color[2])))
+
+        update()
+        wait(0.01)
+
+    wait(0.09)
 
 
 def calculate_next_day(bools, start):
