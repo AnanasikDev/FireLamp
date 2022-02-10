@@ -21,6 +21,8 @@ MODE = 2
 MODES_Count = 7
 MODES_ARGS = []
 
+brightness = 1.0
+
 _strip = None
 _args = None
 _pressed = False
@@ -81,7 +83,19 @@ init()
 
 
 def setPixel(index, color):
-    _strip.setPixelColor(index, color)
+    # r, g, b = color % 256 # ну ты понял (для настройки яркости, контрастности и т.п.)
+    b = int(color % 256 * brightness)
+    g = int((color // 256) % 256 * brightness)
+    r = int((color // 256) // 256 * brightness)
+
+    # g = int(g / 1.2)
+    # r = int(r / 1.2)
+
+    c = Color(r, g, b)
+
+    # print(brightness)
+
+    _strip.setPixelColor(index, c)
 
 
 def update():
@@ -182,10 +196,9 @@ def clamp(value, minv, maxv):
 def randomFill(args):
     global _pressed, modechanged
 
-    massive = 300
-    speed = 1.0
+    massive = int(args[1])
+    speed = float(args[0])
 
-    speed = 1 / speed
     while True:
         for i in range(massive):
             if _pressed or modechanged:
@@ -194,7 +207,7 @@ def randomFill(args):
                 return
             setPixel(rand(0, 255), ColorClass.getRandomColor())
             update()
-            wait(uniform(0.05 * speed, 0.12 * speed))
+            wait(uniform(0.05, 0.12) / speed)
         for i in range(massive*3):
             if _pressed or modechanged:
                 _pressed = False
@@ -202,7 +215,7 @@ def randomFill(args):
                 return
             setPixel(rand(0, 255), Color(0, 0, 0))
             update()
-            wait(uniform(0.004 * speed, 0.01 * speed))
+            wait(uniform(0.004, 0.01) / speed)
 
 
 def fill(color=None, delay=1.0):
@@ -332,7 +345,7 @@ class Drop:
         self.parts.append(self.index)
         setPixel(self.parts[0], self.bgc)
         self.parts.remove(self.parts[0])
-        print(self.parts)
+        # print(self.parts)
 
 
 def rain(args):
@@ -342,7 +355,7 @@ def rain(args):
     for i in range(count):
         drops.append(Drop(7 + rand(-2, 3), [0, 105 + rand(-10, 10), 225 + rand(-5, 4)], rand(0, 15), rand(-2, 0),
                           ColorClass.modificateColor([6, 30 + rand(-5, 5), 30 + rand(-2, 3)])))
-    print("ИНИЦИАЛИ")
+    # print("ИНИЦИАЛИ")
     while True:
         if _pressed or modechanged:
             _pressed = False
@@ -362,7 +375,7 @@ def lava(args):
     for i in range(count):
         drops.append(Drop(10 + rand(-2, 3), [75, 110 + rand(-5, 5), 10 + rand(-5, 4)], rand(0, 15), rand(6, 13),
                           ColorClass.modificateColor([250, 14, 6])))
-    print("ИНИЦИАЛИ")
+    #print("ИНИЦИАЛИ")
     while True:
         if _pressed or modechanged:
             _pressed = False
@@ -537,6 +550,7 @@ def shimmer(args):
     wait(0.09)
 
 
+
 def calculate_next_day(bools, start):
     for i in range(start, len(bools) + start):
         if i >= len(bools):
@@ -544,7 +558,6 @@ def calculate_next_day(bools, start):
         if bools[i] == 1:
             return i
     return -1
-
 
 sunriseon = True
 waiting = False

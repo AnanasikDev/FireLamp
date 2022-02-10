@@ -87,6 +87,34 @@ class ServerHandler(BaseHTTPRequestHandler):
             except:
                 pass
 
+        elif self.path.startswith("/ss"): # set settings
+            try:
+                query = urlparse(self.path).query
+                query_components = dict(qc.split("=") for qc in query.split("&"))
+                enable = int(query_components["e"])
+                brightness = int(query_components["b"])
+                # i = query_components["i"]
+                # query_components = { "imsi" : "Hello" }
+
+                if enable == 1:
+                    matrix.fill(matrix.Color(0, 100, 0))
+                elif enable == 0:
+                    matrix.fill(matrix.Color(0, 0, 0))
+
+                matrix.brightness = brightness
+
+                print(brightness)
+
+                # matrix.modes[modeid]()
+                # matrix.LED_BRIGHTNESS = i
+                # matrix.init()
+                self.wfile.write(f"Enabled = {enable}".encode('utf-8'))
+                self.send_response(200)
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+            except:
+                pass
+
         elif self.path.startswith("/st"): # set time
             try:
                 print("Crya")
