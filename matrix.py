@@ -1,4 +1,4 @@
-from time import sleep as wait, strftime as time
+from time import sleep as wait, strftime as time, time as timesecs
 from random import randint as rand, uniform
 from random import choice as choose
 from rpi_ws281x import *
@@ -6,6 +6,7 @@ import argparse
 import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
 from math import log, sin, pi, log2
 import matplotlib.colors as colors
+import web
 
 #######################################
 LED_COUNT = 256  # Суммарное кол-во светодиодов (256 для 16 на 16)
@@ -180,6 +181,14 @@ class ColorClass:
 
 def clamp(value, minv, maxv):
     return max(min(value, maxv), minv)
+
+
+def repeat(value, min, max):
+    if value > max:
+        value = min
+    elif value < min:
+        value = max
+    return value
 
 
 #######################################
@@ -422,61 +431,13 @@ def clamp_color(color):
     if color[2] > 255:
         color[2] = 255
 
-
 def shimmer(args):
-    print("shimmer")
-    #color = [10, 10, 250]
+    global _pressed, modechanged
+
     color = [0, 200, 0]
-    #fill(Color(color[0], color[1], color[2]))
-    #update()
-    #fill(Color(abs(color[0]), abs(color[1]), abs(color[2])))
     time_step = 0.25
     color_step = 5
     cycles = 40
-    # for i in range(int(cycles // 1)): # от голубого к красному
-    #     for line in range(15, -1, -1):
-    #         color[0] += 1
-    #         color[1] -= 1
-    #         color[2] -= 1
-    #
-    #         clamp_color(color)
-    #
-    #         print(color)
-    #
-    #         for pixel in range(16):
-    #             setPixel(line * 16 + pixel, Color(abs(color[0]), abs(color[1]), abs(color[2])))
-    #
-    #         update()
-    #         #wait(0.005)
-    #
-    # for i in range(int(cycles // 1)): # от красного к зеленому
-    #     for line in range(15, -1, -1):
-    #         color[0] -= 1
-    #         color[1] += 1
-    #         color[2] -= 1
-    #
-    #         clamp_color(color)
-    #
-    #         print(color)
-    #
-    #         for pixel in range(16):
-    #             setPixel(line * 16 + pixel, Color(abs(color[0]), abs(color[1]), abs(color[2])))
-    #
-    #         update()
-    #         #wait(0.005)
-
-    # fill(Color(0, 25, 175))
-    # update()
-    # wait(1)
-    # fill(Color(0, 10, 190))
-    # update()
-    # wait(1)
-    # fill(Color(0, 0, 200))
-    # update()
-    # wait(1)
-    # fill(Color(0, 10, 190))
-    # update()
-    # wait(1)
 
     for i in range(40): # от зеленого к синему
         color[0] -= 4
@@ -484,7 +445,7 @@ def shimmer(args):
         color[2] += 5
         clamp_color(color)
 
-        print("зеленый - синий", color)
+        # print("зеленый - синий", color)
 
         for line in range(16):
         #     color[0] -= 1
@@ -495,6 +456,11 @@ def shimmer(args):
 
             # for pixel in range(0 + line % 2, 16, 2):
             #    setPixel(line * 16 + pixel, Color(abs(color[0]), abs(color[1]) // 5, abs(color[2])))
+
+        if _pressed or modechanged:
+            _pressed = False
+            modechanged = False
+            return
 
         update()
         wait(0.012)
@@ -507,7 +473,7 @@ def shimmer(args):
         color[2] -= 5
         clamp_color(color)
 
-        print("синий - зеленый", color)
+        # print("синий - зеленый", color)
 
         for line in range(16):
             # color[0] -= 1
@@ -519,6 +485,11 @@ def shimmer(args):
             #    setPixel(line * 16 + pixel, Color(abs(color[0]), abs(color[1]) // 5, abs(color[2])))
             for pixel in range(16):
                 setPixel(line * 16 + pixel, Color(abs(color[0]), abs(color[1]) // 5, abs(color[2])))
+
+        if _pressed or modechanged:
+            _pressed = False
+            modechanged = False
+            return
 
         update()
         wait(0.01)
@@ -531,7 +502,7 @@ def shimmer(args):
         color[2] -= 5
         clamp_color(color)
 
-        print("красный - зеленый", color)
+        # print("красный - зеленый", color)
 
         for line in range(16):
             # color[0] -= 1
@@ -544,33 +515,180 @@ def shimmer(args):
             for pixel in range(16):
                 setPixel(line * 16 + pixel, Color(abs(color[0]), abs(color[1]) // 5, abs(color[2])))
 
+        if _pressed or modechanged:
+            _pressed = False
+            modechanged = False
+            return
+
         update()
         wait(0.01)
 
     wait(0.09)
 
 
+def murling(args):
+    screen_size = 16
 
-def calculate_next_day(bools, start):
-    for i in range(start, len(bools) + start):
-        if i >= len(bools):
-            i = 0
-        if bools[i] == 1:
-            return i
-    return -1
+    pixel_size = 1
+
+    resolution = screen_size // pixel_size
+
+    matrix = [[[] for _ in range(resolution)] for _ in range(resolution)]
+
+    def gray():
+        light = rand(0, 255)
+        return [light, light, light]
+
+    def edit_color(color, func):
+        return [func(color[0]), func(color[1]), func(color[2])]
+
+    def make_contrast(value):
+        if value < 0.5:
+            value = value ** 0.5
+        else:
+            value = value ** 2
+
+        value **= 0.9
+
+        print("value =", value)
+
+        return value
+
+    def make_perlin():
+        for y in range(resolution):
+            for x in range(resolution):
+                # matrix[y][x] = edit_color(gray(), lambda light: abs(int(log2(abs(light + 1)))) * 1)
+                matrix[y][x] = edit_color(gray(), lambda light: abs(int(log2(abs(light + 1)))) * 1)
+                matrix[y][x] = edit_color(matrix[y][x], lambda light : make_contrast(light))
+
+    make_perlin()
+
+    def lerp_num(a, b, t):
+        return a + t * (b - a)
+
+    def lerp_color(color, target_color, t):
+        return [lerp_num(color[0], target_color[0], t),
+                lerp_num(color[1], target_color[1], t),
+                lerp_num(color[2], target_color[2], t)]
+
+    def shift_hue(color, shift):
+        # 0.00 - 0.33 = красный - зеленый
+        # 0.33 - 0.66 = зеленый - синий
+        # 0.66 - 0.99 - синий - красный
+
+        shift = repeat(shift, 0.0, 1.0)
+
+        contrast = 1.3
+        depth = 0.55
+
+        if 0.0 <= shift <= 0.333:
+            color[0] = clamp(int(color[0] ** contrast), 0, 255)
+            color[1] = clamp(int(color[1] ** depth), 0, 255)
+            color[2] = clamp(int(color[2] ** depth), 0, 255)
+        if 0.334 <= shift <= 0.666:
+            color[0] = clamp(int(color[0] ** depth), 0, 255)
+            color[1] = clamp(int(color[1] ** contrast), 0, 255)
+            color[2] = clamp(int(color[2] ** depth), 0, 255)
+        if 0.667 <= shift <= 1.0:
+            color[0] = clamp(int(color[0] ** depth), 0, 255)
+            color[1] = clamp(int(color[1] ** depth), 0, 255)
+            color[2] = clamp(int(color[2] ** contrast), 0, 255)
+
+        return color
+
+
+    def randomize_color(color):
+        a = 1.0 / float(int(timesecs()) % rand(3, 6) + 1)
+        c = [color[0] // 2.4, color[1] // 1.6, color[2] * 1.25]
+        hue = shift_hue(c, a)
+
+        c = lerp_color(lerp_color(c, hue, 0.4), color, 0.1)
+
+        return c
+
+
+    for i in range(screen_size):
+        for j in range(screen_size):
+            c = matrix[i][j]
+            color = randomize_color(c)
+            # print(color)
+            setPixel(i * 16 + j, Color(int(color[0]), int(color[1]), int(color[2])))
+        update()
+
+    wait(uniform(0.0225, 0.045))
+
+
+def calculate_waiting(schedule, current_time, dayofweek):
+
+    print("CalculaTION")
+
+    print(timesecs())
+
+    enables = []
+    hours = []
+    mins = []
+
+    sch = schedule.split(":")
+
+    print(sch)
+
+    for i in range(0, 21, 3):
+        enables.append(int(sch[i]))
+
+    for i in range(1, 21, 3):
+        hours.append(int(sch[i]))
+
+    for i in range(2, 21, 3):
+        mins.append(int(sch[i]))
+
+        #
+        # if i % 3 == 0:
+        #     mins.append(int(sch[i-1]))
+        # elif i % 2 == 0:
+        #     hours.append(int(sch[i-1]))
+        # else:
+        #     enables.append(int(sch[i-1]))
+
+    print(enables, hours, mins)
+
+    deltaday = 0
+
+    targetdayofweek = repeat(dayofweek + 1, 0, 6)
+
+    for i in range(7):
+        if enables[targetdayofweek] == 0:
+            deltaday += 1
+            targetdayofweek = repeat(targetdayofweek + 1, 0, 6)
+        else:
+            break
+
+    print("targetdayofweek = ", targetdayofweek)
+
+    targetseconds = hours[targetdayofweek] * 3600 + mins[targetdayofweek] * 60 + deltaday * 86400
+
+    print(targetseconds, current_time)
+
+    print("COCOCOC")
+
+    return targetseconds - current_time
 
 sunriseon = True
 waiting = False
-def sunrise(current_time, target_time, duration, target_day_of_week, schedule):
-    global sunriseon, waiting
+dayofweekglobal = 0
+def sunrise(schedule, current_time, dayofweek):
+    global sunriseon, waiting, _pressed, modechanged, dayofweekglobal
 
-    print("Enabled!", sunriseon, waiting, current_time, target_time, duration, target_day_of_week, schedule)
+    dayofweekglobal = dayofweek
+
+    print("Sunrise Enabled!", schedule, time, dayofweek)
 
     while sunriseon:
 
-        if current_time < target_time and not waiting:
+        if not waiting:
             waiting = True
             fill(Color(0, 0, 0))
+
+            target_time = calculate_waiting(schedule, current_time, dayofweekglobal)
 
             step = (target_time - current_time) / 10000.0
 
@@ -585,6 +703,10 @@ def sunrise(current_time, target_time, duration, target_day_of_week, schedule):
                     print("Sunrise aborted")
                     fill(Color(0, 100, 0))
                     return
+                if _pressed or modechanged:
+                    _pressed = False
+                    modechanged = False
+                    return
         else:
             waiting = False
 
@@ -595,7 +717,7 @@ def sunrise(current_time, target_time, duration, target_day_of_week, schedule):
         print("SUNRISEEE start")
 
 
-        step = duration / 255.0
+        step = 300.0 / 255.0
 
         for i in range(255):
             if not sunriseon:
@@ -611,16 +733,14 @@ def sunrise(current_time, target_time, duration, target_day_of_week, schedule):
 
         print("SUNRISEEE end")
 
-        for i in range(60):
-            wait(60)
+        for i in range(1200):
+            wait(1)
             if not sunriseon:
                 sunriseon = True
-                print("Sunrise aborted")
+                print("Sunrise endededed")
                 fill(Color(0, 0, 0))
 
-                target_day_of_week += 1
-
-                target_time += schedule[calculate_next_day(schedule, target_day_of_week)] * 86400
+                dayofweekglobal = repeat(dayofweekglobal, 0, 6)
 
                 return
 
@@ -630,7 +750,7 @@ modes = {1: randomFill,
           3: candle,
           4: rain,
           5: lava,
-          6: rainbow,
+          6: murling,
           7: shimmer}
 
 

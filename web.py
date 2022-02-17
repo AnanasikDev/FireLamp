@@ -3,10 +3,51 @@ from urllib.parse import urlparse
 import threading
 import matrix
 
+import sys
+import trace
+import time
+
 html = "<html><body>Hello from the Raspberry Pi</body></html>"
+alarmthread = None
+#kill = False
+
+
+class thread_with_trace(threading.Thread):
+    def __init__(self, *args, **keywords):
+        threading.Thread.__init__(self, *args, **keywords)
+        self.killed = False
+
+    def start(self):
+        self.__run_backup = self.run
+        self.run = self.__run
+        threading.Thread.start(self)
+
+    def __run(self):
+        sys.settrace(self.globaltrace)
+        self.__run_backup()
+        self.run = self.__run_backup
+
+    def globaltrace(self, frame, event, arg):
+        if event == 'call':
+            return self.localtrace
+        else:
+            return None
+
+    def localtrace(self, frame, event, arg):
+        if self.killed:
+            if event == 'line':
+                raise SystemExit()
+        return self.localtrace
+
+    def kill(self):
+        self.killed = True
+
 
 class ServerHandler(BaseHTTPRequestHandler):
     def do_GET(self):
+
+        global alarmthread
+
         if self.path == "/":
             self.send_response(200)
             self.send_header('Content-type', 'text/html')
@@ -92,7 +133,7 @@ class ServerHandler(BaseHTTPRequestHandler):
                 query = urlparse(self.path).query
                 query_components = dict(qc.split("=") for qc in query.split("&"))
                 enable = int(query_components["e"])
-                brightness = int(query_components["b"])
+                brightness = float(query_components["b"])
                 # i = query_components["i"]
                 # query_components = { "imsi" : "Hello" }
 
@@ -121,10 +162,9 @@ class ServerHandler(BaseHTTPRequestHandler):
 
                 query = urlparse(self.path).query
                 query_components = dict(qc.split("=") for qc in query.split("&"))
-                c = query_components["c"]  # Текущее время
-                t = query_components["t"]  # Время старта
-                d = query_components["d"]  # Длительность рассвета
-                s = query_components["s"]  # График включения (понедельно)
+                schedule = query_components["sch"]
+                current_time = int(query_components["time"])
+                day = int(query_components["day"])
                 e = int(query_components["e"])  # Состояние (Вкл/Выкл)
 
                 print(e)
@@ -136,33 +176,45 @@ class ServerHandler(BaseHTTPRequestHandler):
                 else:
 
                     matrix.sunriseon = True
-                    currenttime = list(map(int, c.split(":")))
-                    currentseconds = currenttime[-1] + currenttime[-2] * 60 + currenttime[-3] * 3600 + currenttime[-4] * 86400
 
-                    targettime = list(map(int, t.split(":")))
-                    targetseconds = targettime[-1] + targettime[-2] * 60 + targettime[-3] * 3600 + targettime[-4] * 86400
+                    # currenttime = list(map(int, c.split(":")))
+                    # currentseconds = currenttime[-1] + currenttime[-2] * 60 + currenttime[-3] * 3600 + currenttime[-4] * 86400
+                    #
+                    # targettime = list(map(int, t.split(":")))
+                    # targetseconds = targettime[-1] + targettime[-2] * 60 + targettime[-3] * 3600 + targettime[-4] * 86400
+                    #
+                    # schedule = list(map(int, s.split(":")))
+                    #
+                    # target_day_of_week = targettime[-7]
+                    #
+                    # print("TARGET = ", targettime)
+                    #
+                    # duration = list(map(int, d.split(":")))
+                    # print(duration)
+                    # durationseconds = duration[-1] + duration[-2] * 60 + duration[-3] * 3600
+                    # print(durationseconds)
 
-                    schedule = list(map(int, s.split(":")))
+                    # if targetseconds < currentseconds:
+                    #     print("TIME IS WRONG")
+                    #
+                    # else:
 
-                    target_day_of_week = targettime[-7]
+                    matrix.MODE = 0
+                    if alarmthread != None and alarmthread.is_alive():
+                        # threading.Event().set()
+                        # alarmthread._stop()
+                        # alarmthread.setDaemon(true)
+                        alarmthread.kill()
+                    #kill = True
+                    #alarmthread = threading.Thread(target=matrix.sunrise, args=(schedule, time, day))
+                    #alarmthread.start()
 
-                    print("TARGET = ", targettime)
+                    current_seconds = time.time()
 
-                    duration = list(map(int, d.split(":")))
-                    print(duration)
-                    durationseconds = duration[-1] + duration[-2] * 60 + duration[-3] * 3600
-                    print(durationseconds)
+                    alarmthread = thread_with_trace(target=matrix.sunrise, args=(schedule, current_seconds, day))
+                    alarmthread.start()
 
-                    if targetseconds < currentseconds:
-                        print("TIME IS WRONG")
-
-                    else:
-
-                        matrix.MODE = 0
-                        x = threading.Thread(target=matrix.sunrise, args=(currentseconds, targetseconds, durationseconds, target_day_of_week, schedule))
-                        x.start()
-
-                        # matrix.sunrise(currentseconds, targetseconds, durationseconds)
+                    # matrix.sunrise(currentseconds, targetseconds, durationseconds)
 
                 self.send_response(200)
                 self.send_header('Content-type', 'text/html')
