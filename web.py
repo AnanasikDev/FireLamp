@@ -68,8 +68,8 @@ class ServerHandler(BaseHTTPRequestHandler):
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
                 #matrix.modes[3]()
-                if matrix.MODE != 0 : matrix.modechanged = True
-                matrix.MODE = 0
+                if matrix.mode != 0 : matrix.modechanged = True
+                matrix.mode = 0
                 matrix.fill(matrix.Color(int(r), int(g), int(b)))
                 #matrix.LED_BRIGHTNESS = i
                 #matrix.init()
@@ -95,11 +95,16 @@ class ServerHandler(BaseHTTPRequestHandler):
 
                 #matrix.LED_BRIGHTNESS = i
                 #matrix.init()
-                self.wfile.write(f"MODE = {modeid}".encode('utf-8'))
+
+                print("M0DE changed. mode = ", modeid)
+
+                self.wfile.write(f"mode = {modeid}".encode('utf-8'))
                 matrix.fill(matrix.Color(0,0,0))
                 matrix.modechanged = True
-                matrix.MODES_ARGS = ops
-                matrix.MODE = modeid
+                matrix.modeS_ARGS = ops
+                matrix.mode = modeid
+
+                print("M0DE changed updated. Now mode = ", matrix.mode, )
                 # for i in range(1000):
                 #     matrix.modes[modeid]()
 
@@ -199,7 +204,7 @@ class ServerHandler(BaseHTTPRequestHandler):
                     #
                     # else:
 
-                    matrix.MODE = 0
+                    matrix.mode = 0
                     if alarmthread != None and alarmthread.is_alive():
                         # threading.Event().set()
                         # alarmthread._stop()
